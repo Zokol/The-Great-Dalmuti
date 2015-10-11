@@ -6,6 +6,8 @@ Source: https://en.wikipedia.org/wiki/The_Great_Dalmuti
 The Great Dalmuti is a game which presents players the simplified mechanics of social classes;
 It's hard to advance from slave to a king, it's equally easy to lose your status as a king.
 
+This implementation uses simplified version of the rules. The Lesser Dalmuti and Lesser Slave are dropped, as well as taxation and revolution.
+
 Prequcitions:
 Pack of cards: numbers 1-12, the value of the card determines also how many of that card there is in the pack. (One with value 1, two with value 2, etc.. finally twelve with value 12).
 Players 3-10, basically you could play this game with more players, but at some point the players-cards-ratio is too high to keep the game meaningfull.
