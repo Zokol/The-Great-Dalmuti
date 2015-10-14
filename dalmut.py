@@ -4,49 +4,13 @@ import random
 THE GREAT DALMUTI
 Heikki "Zokol" Juva 2015 - heikki@juva.lu
 
-
-This game goes for many names, but the name "The Great Dalmuti" is the one my friend used for this, when she introduced the game to us one summer afternoon at Puolalanpuisto, Turku.
-
-The Great Dalmuti is a game which presents players the simplified mechanics of social classes;
-It's hard to advance from slave to a king, it's equally easy to lose your status as a king.
-
-Prequcitions:
-Pack of cards: numbers 1-12, the value of the card determines also how many of that card there is in the pack. (One with value 1, two with value 2, etc.. finally twelve with value 12).
-Players 3-10, basically you could play this game with more players, but at some point the players-cards-ratio is too high to keep the game meaningfull.
-
-Game start and player order determination:
-Pack is shuffled and players are dealt one card each. The player who has the lowest value card is now the "Dalmuti", player with the lowest value card is now the "slave". Every other player are "traders" and will arrange according to their card values, the player having the lowest value is positioned next to the Dalmuti and the player with the next lowest value card is positioned next to him/her.
-Cards are finally returned to the pack and it's shuffled again.
-
-Gameplay:
-The whole pack is dealt to players equally, or as equally it is possible to deal the pack with given number of players.
-
-Round:
-Dalmuti starts the first round. He/she selects cards from hand which are the same value, for example five 7s, usually it is preferred to select the high value cards at the start of the game.
-The next player has to put down the same number of lower number cards than are on the top of the stack. For example, if the previous player put down five 7s, you have to put five 6s or five 5s.
-If player has no cards to put down (no suitable cards in hand), player has to skip. Player can also skip if he/she doesn't want to put down anything, even if it would be possible.
-Round continues as long as players have something to put on the table. The player who puts the last cards on the table (everyone after that player skips), this player can then start the next round, placing any number of any card he/she has in hand.
-
-Game:
-Rounds are played as long as at least two players have cards in their hand. 
-When some player is the first to empty his/hers hand, this player is now the Dalmuti in the next game and starts the next round.
-The next player who gets rid of all cards is trader in the next game, and plays after the dalmuti.
-Playing order for the rest of the players in the next game is determined by the order which they get their hands empty.
-The last player having hards in his/hers hand is the "slave" for the next round, and plays last.
-
-The game has no definite ending, you just have to agree on end the game after certain time or number of rounds.
-
-Point system:
-This implementation of The Great Dalmuti evaluates the players on the basis of how many times they get the status of "Dalmuti", "Trader" or "Slave".
-
-Player AI:
-The simplified AI engine introduced here (in Player.play_best_card()) selects always just the most common and highest value cards in hand.
-The reasoning behind selecting this logic is that it's usually adviceable to play your high-cards first. In some situations, it may also be advantage to have multiple high-cards, which other players can't possibly match because of the number of cards requested (for example, you have four 5s, other players only have three cards each. This means that other players have no possibility to match your hand in this round, meaning also that you can start the next one.)
-
 """
 
 ## Exception raised when all players have skipped the round
 class SkipException(Exception):
+	pass
+
+class RestartRound(Exception):
 	pass
 
 class Card:
@@ -64,7 +28,7 @@ class Player:
 		self.name = name
 		self.hand = []
 		self.position = "TBD"
-		self.stats = {"Dalmut": 0, "Trader": 0, "Slave": 0}
+		self.stats = {"Dalmut": [], "Trader": [], "Slave": []}
 
 	def __str__(self):
 		card_list = []
@@ -158,8 +122,11 @@ class Stack:
 	def lift_top_card(self):
 		return self.stack.pop(0)
 
+	def add(self, card):
+		self.stack.append(card)
+
 class Game:
-	def __init__(self, number_of_players, number_of_games):
+	def __init__(self, number_of_players, number_of_games, number_of_rounds):
 		self.table = []
 		self.players = []
 		for p in range(number_of_players):
@@ -178,10 +145,9 @@ class Game:
 
 		# Main loop
 		#starting_player = self.players[0]
-		playing_order = self.players
 		for i in range(number_of_games):
 			self.reset_stack()
-			playing_order = self.play_game(playing_order)
+			self.play_game(self.players, number_of_rounds)
 			#self.order_players(starting_player)
 
 		print("Game over")
@@ -206,8 +172,7 @@ class Game:
 		print("-----------------------")
 		print("")
 
-	def play_game(self, playing_order):
-
+	def play_game(self, playing_order, number_of_rounds):
 
 		print("-----------------------")
 		print("")
@@ -220,19 +185,24 @@ class Game:
 		print("")
 
 		round_i = 0
-		while round_i < 10:
+		while round_i < number_of_rounds:
 			round_i += 1
 			print("Play round", round_i)
-			print(playing_order)
+			#print(playing_order)
 			playing_order = self.play_round(playing_order)
-			print(playing_order)
-			playing_order[0].stats["Dalmut"] += 1
+			#print(playing_order)
+			playing_order[0].stats["Dalmut"].append(round_i)
 			for player in playing_order[1: -1]:
-				player.stats["Trader"] += 1
-			playing_order[-1].stats["Slave"] += 1
+				player.stats["Trader"].append(round_i)
+			playing_order[-1].stats["Slave"].append(round_i)
+			print("Players card count:", self.count_player_cards(playing_order))
+			self.empty_table()
+			self.deal_cards()
+			print("Players card count:", self.count_player_cards(playing_order))
 			#if not new_order[0].hand: return new_order #XXX ????
 			self.table = []
 			self.print_players()
+			self.print_stats()
 
 	def print_players(self):
 		for p in self.players:
@@ -240,7 +210,7 @@ class Game:
 
 	def print_stats(self):
 		for p in self.players:
-			print (p.name, p.stats)
+			print (p.name, "Dalmut:", len(p.stats["Dalmut"]), "Trader:", len(p.stats["Trader"]), "Slave:", len(p.stats["Slave"]))
 
 	def print_table(self):
 		top_cards = self.table[-1]
@@ -254,46 +224,89 @@ class Game:
 		self.players.sort(key = lambda player: player.hand[0].value)
 		for player in self.players:
 			player.position = "Trader"
-			player.stats["Trader"] += 1
+			player.stats["Trader"].append(0)
 		self.players[0].position = "Dalmut"
 		self.players[-1].position = "Slave"
-		self.players[0].stats["Dalmut"] += 1
-		self.players[-1].stats["Slave"] += 1
+		self.players[0].stats["Dalmut"].append(0)
+		self.players[-1].stats["Slave"].append(0)
 
 	def deal_cards(self):
+		print("Number of cards in stack:", len(self.stack))
 		card_id = 0
 		while card_id < len(self.stack):
 			for player in self.players:
 				player.receive_card(self.stack.lift_top_card())
 				card_id += 1
 
+	def count_player_cards(self, players):
+		total = 0
+		for player in players:
+			total += len(player.hand)
+		return total
+
 	def empty_players_hands(self):
 		for player in self.players:
 				player.empty_hand()
+
+	def empty_table(self):
+		card_count = 0
+		for cards in self.table:
+			for card in cards:
+				card_count += len(cards)
+				self.stack.add(cards.pop(cards.index(card)))
+		print("Number of cards on table", card_count)
+		self.table = []
 
 	def play_round(self, players):
 		#starting_index = self.players.index(starting_player)
 		#transposed_players = self.players[starting_index:] + self.players[:starting_index]	
 		new_order = []
 		skip_counter = 0
+		new_dalmut = False
 		while True:
-			for player in players:
-				if skip_counter == len(players) - 1:
-					return player
-				try:
-					print(player)
-					self.table.append(player.play_hand(self.table))
-					if not player.hand and not new_dalmut: new_order.append(players.pop(players.index(player)))
-					elif not player.hand and new_dalmut and len(players) > 1: new_order.append(players.pop(players.index(player)))
-					elif not player.hand and len(players) == 1: 
-							new_order.append(players.pop(players.index(player)))
-							print(new_order)
+			try:
+				for player in players:
+					if skip_counter == len(players) - 1:
+						#return player
+						## Every other player skipped, transpose player-list to let current player to start the next round
+						starting_index = self.players.index(player)
+						transposed_players = self.players[starting_index:] + self.players[:starting_index]	
+						players = transposed_players
+						skip_counter = 0
+						self.empty_table()
+						raise RestartRound
+					try:
+						#print(player)
+						
+						## If someone runs out of cards, here we determine who gets which position for the next game
+						"""
+						print("Hand empty:", not player.hand)
+						print("Player finished:", player in new_order)
+						print("Is new dalmut found:", new_dalmut)
+						"""
+						if player in new_order:
+							pass
+						elif not player.hand and not new_dalmut: 
+							#print("New Dalmut found!!")
+							new_order.append(player) # First player runs out of cards
+							new_dalmut = True
+						elif not player.hand and new_dalmut and len(players) - 1 > len(new_order):
+							new_order.append(player) # Player runs out of cards, who is not the first and not the last
+						elif not player.hand and len(players) - 1 == len(new_order):  # Last player runs out of cards
+							new_order.append(player)
+							#print("NEW ORDER:", new_order)
 							return new_order
-					self.print_table()
-					skip_counter = 0
-				except SkipException:
-					print("Skip")
-					skip_counter += 1
+						else:
+							self.table.append(player.play_hand(self.table)) ## Let the next playr to play the hand and place it on the table
+							self.print_table()
+
+						#skip_counter = 0
+					except SkipException:
+						print("Skip")
+						skip_counter += 1
+			except RestartRound:
+				print("Restarting round with new order")
+				pass
 
 if __name__ == '__main__':
-	game = Game(5, 3)
+	game = Game(10, 3, 900)
